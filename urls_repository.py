@@ -21,6 +21,7 @@ class URLSRepository:
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
             row = cur.fetchone()
+            self.conn.commit()
             return dict(row) if row else None
 
     def get_by_term(self, search_term=''):
@@ -41,6 +42,7 @@ class URLSRepository:
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             query = "SELECT id FROM urls WHERE name = %s"
             cur.execute(query, (url,))
+            self.conn.commit()
             return cur.fetchone()
 
     def _update(self, url):
