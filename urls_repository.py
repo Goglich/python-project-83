@@ -15,6 +15,7 @@ class URLSRepository:
             cur.execute("SELECT * FROM urls order by id desc")
             result = [dict(row) for row in cur]
             self.conn.commit()
+            self.conn.close()
             return result
 
     def find(self, id):
@@ -42,8 +43,10 @@ class URLSRepository:
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             query = "SELECT id FROM urls WHERE name = %s"
             cur.execute(query, (url,))
+            result = cur.fetchone()
             self.conn.commit()
-            return cur.fetchone()
+            self.conn.close()
+            return result
 
     def _update(self, url):
         with self.conn.cursor() as cur:
@@ -52,6 +55,7 @@ class URLSRepository:
                 (url['name'], url['created_at'], url['id'])
             )
         self.conn.commit()
+        self.conn.close()
 
     def _create(self, url):
         with self.conn.cursor() as cur:
@@ -62,3 +66,4 @@ class URLSRepository:
             id = cur.fetchone()[0]
             url['id'] = id
         self.conn.commit()
+        self.conn.close()
