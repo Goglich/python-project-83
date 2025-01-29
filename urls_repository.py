@@ -6,64 +6,55 @@ class URLError(Exception):
     pass
 
 
+class DBConnection:
+    def __init__(self, db_url, cursor_factory=None):
+        self.db_url = db_url
+        self.cursor_factory = cursor_factory
+
+    def __enter__(self):
+        self.db_url = psycopg2.connect(self.db_url)
+        self.db_url.autocommit = True
+        if self.cursor_factory:
+            return self.db_url.cursor(cursor_factory=self.cursor_factory)
+        return self.db_url.cursor()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.db_url:
+            self.db_url.close()
+
 class URLSRepository:
-    def __init__(self, conn):
-        self.conn = conn
+    def __init__(self, db_url):
+        self.db_url = db_url
+
 
     def get_content(self):
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
+        with DBConnection(self.db_url, cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls order by id desc")
             result = [dict(row) for row in cur]
-            self.conn.commit()
-            self.conn.close()
             return result
 
     def find(self, id):
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
+        with DBConnection(self.db_url, cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
             row = cur.fetchone()
-            self.conn.commit()
             return dict(row) if row else None
 
-    def get_by_term(self, search_term=''):
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("""
-                    SELECT * FROM urls
-                    WHERE name ILIKE %s OR created_at ILIKE %s
-                """, (f'%{search_term}%', f'%{search_term}%'))
-            return cur.fetchall()
-
     def save(self, url):
-        # if self.availability_url(url['url']):
-        #     raise URLError("Страница уже существует")
-        # else:
         self._create(url)
 
     def availability_url(self, url):
-        with self.conn.cursor(cursor_factory=DictCursor) as cur:
+        with DBConnection(self.db_url) as cur:
             query = "SELECT id FROM urls WHERE name = %s"
             cur.execute(query, (url,))
             result = cur.fetchone()
-            self.conn.commit()
-            self.conn.close()
             return result
 
-    def _update(self, url):
-        with self.conn.cursor() as cur:
-            cur.execute(
-                "UPDATE urls SET name = %s, created_at = %s WHERE id = %s",
-                (url['name'], url['created_at'], url['id'])
-            )
-        self.conn.commit()
-        self.conn.close()
 
     def _create(self, url):
-        with self.conn.cursor() as cur:
+        with DBConnection(self.db_url) as cur:
             cur.execute(
                 "INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id",
                 (url['url'], url['created_at'])
             )
             id = cur.fetchone()[0]
             url['id'] = id
-        self.conn.commit()
-        self.conn.close()
