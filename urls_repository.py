@@ -13,7 +13,9 @@ class URLSRepository:
     def get_content(self):
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls order by id desc")
-            return [dict(row) for row in cur]
+            result = [dict(row) for row in cur]
+            self.conn.commit()
+            return result
 
     def find(self, id):
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
