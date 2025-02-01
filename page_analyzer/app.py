@@ -21,6 +21,11 @@ def index():
 @app.route('/urls')
 def get_urls():
     urls = repo.get_content()
+    # if not urls: 
+    #     return render_template('/page_not_found.html')
+    # for url in urls:
+    #     if not url.status_code:
+    #         return render_template('/page_not_found.html')
     return render_template(
         'urls.html',
         urls=urls
@@ -44,14 +49,30 @@ def new_url():
     data['created_at'] = datetime.now()
     repo.save(data)
     flash("Страница успешно добавлена", category="success")
-    return redirect(url_for('get_urls'))
+    return redirect(url_for("show", id=repo.availability_url(data['url'])[0]))
+
 
 @app.route('/urls/<id>')
 def show(id):
     url = repo.find(id)
     if not url:
         return 'page not found', 404
+    url_checks = repo.get_checks_desc(id)
     return render_template(
         'show.html', 
-        url=url
+        url=url,
+        url_checks=url_checks
         )
+
+
+@app.post('/urls/<id>/checks')
+def check_url(id):
+    if not repo.find(id):
+        return render_template(
+            '/page_not_found.html'
+        )
+    repo.save_check(id)
+    flash("Страница успешно проверена", category="success")
+    return redirect(
+        url_for('show', id=id)
+    )
