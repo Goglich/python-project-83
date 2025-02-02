@@ -22,10 +22,10 @@ class DBConnection:
         if self.db_url:
             self.db_url.close()
 
+
 class URLSRepository:
     def __init__(self, db_url):
         self.db_url = db_url
-
 
     def get_content(self):
         with DBConnection(self.db_url, cursor_factory=NamedTupleCursor) as cur:
@@ -49,18 +49,8 @@ class URLSRepository:
                 SELECT * FROM urls WHERE id = %s""", (id,))
             row = cur.fetchone()
             return dict(row) if row else None
+
     def save(self, url):
-        self._create(url)
-
-    def availability_url(self, url):
-        with DBConnection(self.db_url) as cur:
-            query = "SELECT id FROM urls WHERE name = %s"
-            cur.execute(query, (url,))
-            result = cur.fetchone()
-            return result
-
-
-    def _create(self, url):
         with DBConnection(self.db_url) as cur:
             cur.execute(
                 "INSERT INTO urls (name) VALUES (%s) RETURNING id",
@@ -69,16 +59,28 @@ class URLSRepository:
             id = cur.fetchone()[0]
             url['id'] = id
 
-    def save_check(self, ulr_id, status_code):
+    def availability_url(self, url):
+        with DBConnection(self.db_url) as cur:
+            query = "SELECT id FROM urls WHERE name = %s"
+            cur.execute(query, (url,))
+            result = cur.fetchone()
+            return result
+
+    def save_check(self, ulr_id, status_code, h1, title, description):
         with DBConnection(self.db_url) as cur:
             cur.execute(
-                "INSERT INTO url_checks (url_id, status_code) VALUES (%s, %s) RETURNING id",
-                (ulr_id, status_code)
+                """
+                INSERT INTO url_checks
+                (url_id, status_code, h1, title, description)
+                VALUES (%s, %s, %s, %s, %s) RETURNING id
+                """,
+                (ulr_id, status_code, h1, title, description)
             )
 
     def get_checks_desc(self, url_id):
         with DBConnection(self.db_url, cursor_factory=DictCursor) as cur:
-            cur.execute ("""
+            cur.execute(
+                """
                 SELECT id, status_code, COALESCE(h1, '') as h1,
                 COALESCE(title, '') as title, COALESCE(description, '') as
                 description,
@@ -87,6 +89,6 @@ class URLSRepository:
                 WHERE url_id = %s
                 ORDER BY id DESC
                 """,
-                (url_id,)
+                (url_id, )
                 )
             return cur.fetchall()
