@@ -69,11 +69,11 @@ class URLSRepository:
             id = cur.fetchone()[0]
             url['id'] = id
 
-    def save_check(self, ulr_id):
+    def save_check(self, ulr_id, status_code):
         with DBConnection(self.db_url) as cur:
             cur.execute(
-                "INSERT INTO url_checks (url_id) VALUES (%s) RETURNING id",
-                (ulr_id, )
+                "INSERT INTO url_checks (url_id, status_code) VALUES (%s, %s) RETURNING id",
+                (ulr_id, status_code)
             )
 
     def get_checks_desc(self, url_id):
@@ -86,8 +86,7 @@ class URLSRepository:
                 FROM url_checks
                 WHERE url_id = %s
                 ORDER BY id DESC
-                """, 
+                """,
                 (url_id,)
                 )
             return cur.fetchall()
-    

@@ -21,11 +21,6 @@ def index():
 @app.route('/urls')
 def get_urls():
     urls = repo.get_content()
-    # if not urls: 
-    #     return render_template('/page_not_found.html')
-    # for url in urls:
-    #     if not url.status_code:
-    #         return render_template('/page_not_found.html')
     return render_template(
         'urls.html',
         urls=urls
@@ -71,7 +66,13 @@ def check_url(id):
         return render_template(
             '/page_not_found.html'
         )
-    repo.save_check(id)
+    status_code = utils.get_status_code(repo.find(id))
+    if not status_code:
+        flash('Произошла ошибка при проверке', category="error")
+        return redirect(
+        url_for('show', id=id)
+        )
+    repo.save_check(id, status_code)
     flash("Страница успешно проверена", category="success")
     return redirect(
         url_for('show', id=id)
