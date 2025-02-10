@@ -10,8 +10,6 @@ from . import utils
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-DATABASE_URL = os.getenv('DATABASE_URL')
-repo = URLSRepository(DATABASE_URL)
 
 
 @app.errorhandler(404)
@@ -26,6 +24,7 @@ def index():
 
 @app.route('/urls')
 def get_urls():
+    repo = URLSRepository()
     urls = repo.get_content()
     return render_template(
         'urls.html',
@@ -35,34 +34,43 @@ def get_urls():
 
 @app.post('/urls')
 def new_url():
-    data = request.form.to_dict()
-    errors = validate(data)
+    repo = URLSRepository()
+    form_data = request.form.to_dict()
+    errors = validate(form_data['url'])
     if errors:
         flash(errors['name'], category='error')
         return redirect(
             url_for('index')
             )
-    data['url'] = utils.normalizating_url(data['url'])
-    if repo.availability_url(data['url']):
+    normalized_url = utils.normalize_url(form_data['url'])
+    existing_url_id = repo.is_available(normalized_url)
+
+    if existing_url_id:
         flash("Страница уже существует", category="info")
-        return redirect(
-            url_for(
-                "show",
-                id=repo.availability_url(data['url'])[0]
-                )
-            )
-    data['created_at'] = datetime.now()
-    repo.save(data)
-    flash("Страница успешно добавлена", category="success")
-    return redirect(url_for("show", id=repo.availability_url(data['url'])[0]))
+        return redirect(url_for("show", url_id=existing_url_id[0]))
+
+    data_to_save = {
+        'url': normalized_url,
+        'created_at': datetime.now()
+    }
+    repo.save_url(data_to_save)
+    new_url_id = repo.is_available(normalized_url)
+
+    if new_url_id:
+        flash("Страница успешно добавлена", category="success")
+        return redirect(url_for("show", url_id=new_url_id[0]))
+    else:
+        flash("Ошибка при добавлении страницы", category="error")
+        return redirect(url_for('index'))
 
 
-@app.route('/urls/<id>')
-def show(id):
-    url = repo.find(id)
+@app.route('/urls/<url_id>')
+def show(url_id):
+    repo = URLSRepository()
+    url = repo.find_url(url_id)
     if not url:
         return render_template('/page_not_found.html'), 404
-    url_checks = repo.get_checks_desc(id)
+    url_checks = repo.get_checks_desc(url_id)
     return render_template(
         'show.html',
         url=url,
@@ -72,21 +80,22 @@ def show(id):
 
 @app.post('/urls/<id>/checks')
 def check_url(id):
-    if not repo.find(id):
+    repo = URLSRepository()
+    url = repo.find_url(id)
+    if not url:
         return render_template(
             '/page_not_found.html'
         ), 404
-    status_code = utils.get_status_code(repo.find(id))
+    status_code, tags = utils.get_page_data(url)
     if not status_code:
         flash('Произошла ошибка при проверке', category="error")
         return redirect(url_for('show', id=id))
-    parsed_html = utils.html_parse(repo.find(id)['name'])
     repo.save_check(
             id,
             status_code,
-            parsed_html['h1'],
-            parsed_html['title'],
-            parsed_html['description']
+            tags['h1'],
+            tags['title'],
+            tags['description']
         )
     flash("Страница успешно проверена", category="success")
-    return redirect(url_for('show', id=id))
+    return redirect(url_for('show', url_id=id))
