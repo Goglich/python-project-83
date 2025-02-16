@@ -4,17 +4,11 @@ from dotenv import load_dotenv
 import os
 
 
-class URLError(Exception):
-    pass
-
-
 class URLSRepository:
-    def __init__(self):
-        load_dotenv()
-        self.dsn = os.getenv('DATABASE_URL')
-        self.conn = psycopg2.connect(self.dsn)
+    def __init__(self, database_url):
+        self.conn = psycopg2.connect(database_url)
 
-    def get_content(self):
+    def get_all_urls_info(self):
         with self.conn as conn:
             with conn.cursor(cursor_factory=NamedTupleCursor) as cur:
                 cur.execute("""
@@ -31,29 +25,29 @@ class URLSRepository:
                 """)
                 return cur.fetchall()
 
-    def find_url(self, id):
+    def find_url(self, url_id):
         with self.conn as conn:
             with conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute("""
-                    SELECT * FROM urls WHERE id = %s""", (id,))
+                    SELECT id, name, created_at FROM urls WHERE id = %s""", (url_id,))
                 row = cur.fetchone()
                 return dict(row) if row else None
 
-    def save_url(self, url):
+    def save_url(self, url_name):
         with self.conn as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO urls (name) VALUES (%s)",
-                    (url['url'], )
+                    (url_name, )
                 )
 
-    def is_available(self, url):
-        with self.conn as conn:
-            with conn.cursor() as cur:
-                query = "SELECT id FROM urls WHERE name = %s"
-                cur.execute(query, (url,))
-                result = cur.fetchone()
-                return result
+    def get_url(self, name):
+        with self.conn.cursor() as cur:
+            query = "SELECT id, name, created_at FROM urls WHERE name = %s"
+            cur.execute(query, (name,))
+            result = cur.fetchone()
+            self.conn.commit()
+            return result
 
     def save_check(self, ulr_id, status_code, h1, title, description):
         with self.conn as conn:

@@ -34,4 +34,4 @@ def get_page_data(url):
         response.raise_for_status()
         return response.status_code, tags
     except requests.exceptions.RequestException:
-        return None
+        return None, None
