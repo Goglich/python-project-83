@@ -45,9 +45,9 @@ def new_url():
     errors = validate(form_data['url'])
     if errors:
         flash(errors['name'], category='error')
-        return redirect(
-            url_for('index')
-            )
+        return render_template(
+            'index.html'
+            ), 422
     normalized_url = utils.normalize_url(form_data['url'])
     existing_url = repo.get_url(normalized_url)
 
