@@ -58,8 +58,8 @@ def new_url():
     repo.save_url(normalized_url)
     new_url = repo.get_url(normalized_url)
     if new_url:
-        repo.close_connection()
         flash("Страница успешно добавлена", category="success")
+        repo.close_connection()
         return redirect(url_for("show", url_id=new_url[0]))
     else:
         repo.close_connection()
