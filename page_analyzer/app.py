@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import os
 from .urls_repository import URLSRepository
 from .validator import validate
-from datetime import datetime
 from . import utils
 
 

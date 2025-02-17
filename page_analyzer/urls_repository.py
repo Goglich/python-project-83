@@ -1,7 +1,5 @@
 import psycopg2
 from psycopg2.extras import DictCursor, NamedTupleCursor
-from dotenv import load_dotenv
-import os
 
 
 class URLSRepository:
@@ -29,7 +27,11 @@ class URLSRepository:
         with self.conn as conn:
             with conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute("""
-                    SELECT id, name, created_at FROM urls WHERE id = %s""", (url_id,))
+                    SELECT
+                    id,
+                    name,
+                    created_at
+                    FROM urls WHERE id = %s""", (url_id,))
                 row = cur.fetchone()
                 return dict(row) if row else None
 
