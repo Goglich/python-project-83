@@ -31,6 +31,7 @@ def index():
 def get_urls():
     repo = URLSRepository(app.config['DATABASE_URL'])
     urls = repo.get_all_urls_info()
+    repo.close_connection()
     return render_template(
         'urls.html',
         urls=urls
@@ -56,11 +57,12 @@ def new_url():
 
     repo.save_url(normalized_url)
     new_url = repo.get_url(normalized_url)
-
     if new_url:
+        repo.close_connection()
         flash("Страница успешно добавлена", category="success")
         return redirect(url_for("show", url_id=new_url[0]))
     else:
+        repo.close_connection()
         flash("Ошибка при добавлении страницы", category="error")
         return redirect(url_for('index'))
 
@@ -70,8 +72,10 @@ def show(url_id):
     repo = URLSRepository(app.config['DATABASE_URL'])
     url = repo.find_url(url_id)
     if not url:
+        repo.close_connection()
         return render_template('/page_not_found.html'), 404
     url_checks = repo.get_checks_desc(url_id)
+    repo.close_connection()
     return render_template(
         'show.html',
         url=url,
@@ -84,12 +88,14 @@ def check_url(id):
     repo = URLSRepository(app.config['DATABASE_URL'])
     url = repo.find_url(id)
     if not url:
+        repo.close_connection()
         return render_template(
             '/page_not_found.html'
         ), 404
     status_code, tags = utils.get_page_data(url)
     if not status_code:
         flash('Произошла ошибка при проверке', category="error")
+        repo.close_connection()
         return redirect(url_for('show', url_id=id))
     repo.save_check(
             id,
@@ -98,5 +104,6 @@ def check_url(id):
             tags['title'],
             tags['description']
         )
+    repo.close_connection()
     flash("Страница успешно проверена", category="success")
     return redirect(url_for('show', url_id=id))

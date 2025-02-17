@@ -48,7 +48,6 @@ class URLSRepository:
             query = "SELECT id, name, created_at FROM urls WHERE name = %s"
             cur.execute(query, (name,))
             result = cur.fetchone()
-            self.conn.commit()
             return result
 
     def save_check(self, ulr_id, status_code, h1, title, description):
@@ -79,3 +78,6 @@ class URLSRepository:
                     (url_id, )
                     )
                 return cur.fetchall()
+
+    def close_connection(self):
+        self.conn.close()
