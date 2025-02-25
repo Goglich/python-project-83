@@ -49,11 +49,10 @@ def new_url():
     normalized_url = normalize_url(form_data['url'])
     with repo.conn:
         existing_url = repo.get_url(normalized_url)
-    if existing_url:
-        flash("Страница уже существует", category="info")
-        repo.close_connection()
-        return redirect(url_for("show", url_id=existing_url[0]))
-    with repo.conn:
+        if existing_url:
+            flash("Страница уже существует", category="info")
+            repo.close_connection()
+            return redirect(url_for("show", url_id=existing_url[0]))
         repo.save_url(normalized_url)
         new_url = repo.get_url(normalized_url)
     if new_url:
@@ -71,10 +70,9 @@ def show(url_id):
     repo = URLSRepository(app.config['DATABASE_URL'])
     with repo.conn:
         url = repo.find_url(url_id)
-    if not url:
-        repo.close_connection()
-        return render_template('page_not_found.html'), 404
-    with repo.conn:
+        if not url:
+            repo.close_connection()
+            return render_template('page_not_found.html'), 404
         url_checks = repo.get_checks_desc(url_id)
     repo.close_connection()
     return render_template(
@@ -89,17 +87,16 @@ def check_url(url_id):
     repo = URLSRepository(app.config['DATABASE_URL'])
     with repo.conn:
         url = repo.find_url(url_id)
-    if not url:
-        repo.close_connection()
-        return render_template(
-            'page_not_found.html'
-        ), 404
-    status_code, tags = get_page_data(url)
-    if not status_code:
-        flash('Произошла ошибка при проверке', category="error")
-        repo.close_connection()
-        return redirect(url_for('show', url_id=url_id))
-    with repo.conn:
+        if not url:
+            repo.close_connection()
+            return render_template(
+                'page_not_found.html'
+            ), 404
+        status_code, tags = get_page_data(url)
+        if not status_code:
+            flash('Произошла ошибка при проверке', category="error")
+            repo.close_connection()
+            return redirect(url_for('show', url_id=url_id))
         repo.save_check(
                 url_id,
                 status_code,
